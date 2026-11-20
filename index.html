@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>생일파티 초대장 프로토타입</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+@font-face {
+  font-family: "Pretendard";
+  src: url("fonts/PretendardVariable.woff2") format("woff2-variations"), url("fonts/PretendardVariable.woff2") format("woff2");
+  font-weight: 45 920;
+  font-display: block;
+}
+/* Layout: phone frame on the left, prototype controls on the right; stacked on narrow screens */
+:root {
+  --bg: #e9edf6;
+  --panel: #ffffff;
+  --ink: #161a2b;
+  --muted: #5e6478;
+  --line: #dde2ee;
+  --accent: #5892ff;
+  --accent-soft: rgba(88,146,255,.12);
+  --chip: #f2f5fb;
+  --font: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --sf: -apple-system, "SF Pro Text", BlinkMacSystemFont, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e111c; --panel: #171b2a; --ink: #eef1fa; --muted: #9aa1b8; --line: #2a3045;
+    --accent-soft: rgba(88,146,255,.18); --chip: #20263a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e111c; --panel: #171b2a; --ink: #eef1fa; --muted: #9aa1b8; --line: #2a3045;
+  --accent-soft: rgba(88,146,255,.18); --chip: #20263a; color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px;
+  -webkit-font-smoothing: antialiased;
+}
+.layout { display: flex; gap: 40px; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
+.holder { position: relative; flex: none; }
+.device {
+  position: absolute; left: 0; top: 0; box-sizing: content-box; width: 375px; height: 812px; transform-origin: 0 0;
+  background: #0b0b0f; border-radius: 60px; padding: 12px;
+  box-shadow: 0 0 0 2px #2b2d35, 0 30px 60px -20px rgba(20,30,80,.45);
+}
+.screen-wrap {
+  position: relative; width: 375px; height: 812px; border-radius: 48px; overflow: hidden;
+  background: #fff; isolation: isolate;
+}
+.island { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 118px; height: 34px; border-radius: 20px; background: #000; z-index: 50; pointer-events: none; }
+body.bare .device { background: none; box-shadow: none; padding: 0; border-radius: 0; }
+body.bare .screen-wrap { border-radius: 0; }
+body.bare .island { display: none; }
+
+/* ---------- shared phone parts ---------- */
+.screen { position: absolute; inset: 0; transition: transform .38s cubic-bezier(.2,.8,.2,1); font-family: var(--font); }
+.screen[data-pos="right"] { transform: translateX(100%); }
+.screen[data-pos="left"] { transform: translateX(-28%); }
+.statusbar { position: absolute; top: 0; left: 0; width: 375px; height: 55px; display: flex; align-items: center; justify-content: space-between; padding: 18.491px 21.133px 16.73px; z-index: 40; pointer-events: none; }
+.statusbar .time { font-family: var(--sf); font-weight: 600; font-size: 14.969px; line-height: 19.372px; padding-top: 1.321px; }
+.statusbar img { width: 69.27px; height: 19.372px; display: block; }
+.home { position: relative; height: 33px; width: 375px; flex: none; }
+.home::after { content: ""; position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); width: 139px; height: 5px; border-radius: 100px; background: #000; }
+button { font: inherit; border: 0; background: none; padding: 0; cursor: pointer; color: inherit; }
+button:focus-visible { outline: 2px solid #2571ff; outline-offset: 3px; }
+.btn { transition: transform .12s ease, filter .12s ease; }
+.btn:active, .btn.pressed { transform: scale(.97); filter: brightness(.92); }
+
+/* ---------- invite ---------- */
+#invite { background: linear-gradient(180deg, #eef4ff 0%, #fff 100%); }
+#invite .statusbar .time { color: #000; }
+.inv-body { position: absolute; left: 50%; top: 79px; width: 343px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 28px; }
+.inv-title { font-weight: 600; font-size: 22px; line-height: 30px; text-align: center; color: #000; letter-spacing: -0.0044px; }
+.inv-title span { color: #191f28; }
+.inv-card { background: #fff; border-radius: 8px; filter: drop-shadow(0 0 4px rgba(88,146,255,.3)); padding: 36px 30px 32px; display: flex; flex-direction: column; gap: 24px; align-items: center; }
+.inv-sec { display: flex; flex-direction: column; gap: 24px; align-items: center; }
+.inv-card h2 { margin: 0; font-weight: 600; font-size: 20px; line-height: 28px; color: #000; letter-spacing: -0.002px; }
+.inv-line { display: block; width: 267px; height: 1px; }
+.inv-line.thick { height: 1.5px; }
+.inv-rows { width: 267px; display: flex; flex-direction: column; gap: 2px; }
+.inv-row { height: 44px; display: flex; align-items: center; gap: 2px; font-size: 22px; line-height: 30px; letter-spacing: -0.0044px; white-space: nowrap; }
+.inv-row b { font-weight: 600; color: #121212; }
+.inv-row span { font-weight: 500; color: var(--rowgray, #6b6c70); }
+.inv-row span strong { font-weight: 700; }
+#invite.entry .inv-row span { --rowgray: #828388; }
+#invite.entry .inv-row span strong { font-weight: 600; }
+.inv-sec2 { display: flex; flex-direction: column; gap: 24px; align-items: center; }
+#invite.entry .inv-sec2 { gap: 20px; }
+.inv-pre { width: 267px; display: flex; flex-direction: column; gap: 4px; align-items: center; text-align: center; }
+.inv-pre .l1 { font-weight: 600; font-size: 16px; line-height: 24px; color: #6b6c70; }
+.inv-pre .l1 strong { font-weight: 700; color: #3b76e5; }
+.inv-pre .l2 { font-weight: 500; font-size: 15px; line-height: 22px; color: #9c9c9e; }
+.inv-entry { width: 267px; display: flex; flex-direction: column; gap: 16px; align-items: center; text-align: center; }
+.badge { display: flex; align-items: center; gap: 4px; padding: 2px 6px 2px 8px; border-radius: 4px; background: rgba(88,146,255,.1); }
+.badge img { width: 5px; height: 5px; }
+.badge span { font-weight: 500; font-size: 14px; line-height: 22px; color: #4684f7; width: 52px; }
+.inv-entry .t { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.inv-entry .t1 { font-weight: 700; font-size: 16px; line-height: 24px; color: #000; }
+.inv-entry .t2 { font-weight: 500; font-size: 15px; line-height: 22px; color: #9c9c9e; font-variant-numeric: tabular-nums; }
+.inv-entry .t2 span { color: #4e4e4e; }
+.inv-action { position: absolute; left: 0; bottom: 0; width: 375px; padding-top: 8px; display: flex; flex-direction: column; gap: 16px; align-items: center; background: linear-gradient(180deg, rgba(255,255,255,0) 0%, #fff 40.909%); }
+.inv-action .grp { display: flex; flex-direction: column; gap: 8px; align-items: center; width: 100%; }
+.btn-blue { width: 343px; height: 56px; border-radius: 14px; background: #5892ff; color: #fff; font-weight: 600; font-size: 16px; line-height: 24px; display: flex; align-items: center; justify-content: center; }
+.inv-action .cap { font-weight: 500; font-size: 14px; line-height: 22px; color: #6b6c70; text-align: center; }
+.btn-text { width: 343px; padding: 8px 0; font-weight: 600; font-size: 14px; line-height: 20px; color: rgba(59,118,229,.7); text-align: center; }
+#invite:not(.entry) .only-entry, #invite.entry .only-pre { display: none; }
+
+/* ---------- rolling paper ---------- */
+#paper { background: linear-gradient(180deg, rgb(51,66,243) 0%, rgb(92,139,253) 77.476%); overflow: hidden; }
+#paper .statusbar .time { color: #fff; }
+.cake { position: absolute; left: 5.307px; top: 164.462px; width: 364.424px; height: 412.141px; pointer-events: none; user-select: none; }
+.msg { position: absolute; left: 94.5px; top: 335.08px; width: 186px; display: flex; flex-direction: column; gap: 20px; color: #1a46e5; font-weight: 500; font-size: 14px; line-height: 20px; text-align: center; }
+#msg { width: 186px; min-height: 20px; height: 20px; border: 0; padding: 0; margin: 0; resize: none; overflow: hidden; background: transparent; color: inherit; font: inherit; line-height: 20px; text-align: center; caret-color: rgba(77,77,77,.6); outline: none; display: block; }
+#msg::placeholder { color: rgba(26,70,229,.45); }
+.sign { display: none; }
+#paper.done .sign { display: block; }
+.paper-action { position: absolute; left: 0; bottom: 0; width: 375px; padding-top: 8px; display: flex; flex-direction: column; gap: 16px; align-items: center; }
+.paper-action .grp { display: flex; flex-direction: column; gap: 8px; align-items: center; width: 100%; }
+.deadline { font-weight: 500; font-size: 15px; line-height: 22px; color: #fff; text-align: center; font-variant-numeric: tabular-nums; }
+.deadline span { color: #f77; }
+#paper.done .deadline { display: none; }
+.btn-white { width: 343px; height: 56px; border-radius: 14px; background: #fff; color: #000; font-weight: 600; font-size: 16px; line-height: 24px; display: flex; align-items: center; justify-content: center; }
+.btn-white:disabled { cursor: default; color: rgba(0,0,0,.35); }
+
+/* keyboard */
+.kb { position: absolute; left: 0; bottom: 0; width: 375px; height: 319.36px; z-index: 20;
+  background: linear-gradient(180deg, rgba(222,231,248,.72) 0%, rgba(236,241,252,.82) 100%);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5); backdrop-filter: blur(22px) saturate(1.5);
+  box-shadow: 0 -0.5px 0 rgba(255,255,255,.6) inset;
+  transform: translateY(100%); transition: transform .32s cubic-bezier(.2,.8,.2,1); touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+#paper.typing .kb { transform: translateY(0); }
+.kb-suggest { position: absolute; top: 11.2px; left: 0; width: 100%; height: 23.35px; display: flex; align-items: center; }
+.kb-suggest div { flex: 1; text-align: center; font-family: var(--sf); font-size: 16px; color: #1c1c1e; position: relative; }
+.kb-suggest div + div::before { content: ""; position: absolute; left: 0; top: 2px; bottom: 2px; width: 1px; background: rgba(60,60,67,.18); }
+.kb-keys { position: absolute; top: 34.55px; left: 0; width: 100%; height: 210.1px; padding: 9px 3.5px 0; display: flex; flex-direction: column; gap: 10px; }
+.kb-row { display: flex; gap: 5.6px; height: 42.5px; justify-content: center; }
+.kb-row.r2 { padding: 0 18px; }
+.kb-row.r3 .sp { width: 13px; flex: none; }
+.key { flex: 1; min-width: 0; height: 100%; border-radius: 8.5px; background: rgba(255,255,255,.96); box-shadow: 0 1px 0 rgba(30,40,90,.16); display: flex; align-items: center; justify-content: center; font-family: var(--sf); font-size: 23px; color: #2b2d33; padding-bottom: 2px; transition: background .08s; }
+.key.on { background: #c4ccdc; }
+.key.wide { flex: none; width: 42.5px; }
+.key.abc { flex: none; width: 87px; font-size: 15.5px; color: #3a3c42; padding: 0; }
+.key.space { flex: 1; }
+.key.ret { flex: none; width: 87px; background: #0a84ff; padding: 0; }
+.key.ret.on { background: #0062cc; }
+.key svg { display: block; }
+.kb-bottom { position: absolute; top: 244.66px; left: 0; width: 100%; height: 65.37px; }
+.kb-bottom .emoji { position: absolute; left: 33.617px; top: 25.213px; width: 25.138px; height: 25.138px; }
+.kb-bottom .mic { position: absolute; left: 321.352px; top: 25.213px; width: 17.617px; height: 26.345px; }
+
+/* floating notifications */
+.float-slot { position: absolute; top: 60px; left: 0; width: 375px; display: flex; justify-content: center; z-index: 30; pointer-events: none; }
+/* shell = the glass surface that morphs; .fl-c = content inside it */
+.fl-shell { position: relative; pointer-events: auto; border: 1px solid rgba(255,255,255,.8); border-radius: 20px; overflow: hidden;
+  -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); transition: backdrop-filter .5s cubic-bezier(.22,1,.36,1), opacity .25s ease-out; }
+.fl-shell.is-card { -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.fl-shell.morphing { transition: width .52s cubic-bezier(.22,1,.36,1), height .52s cubic-bezier(.22,1,.36,1), backdrop-filter .52s cubic-bezier(.22,1,.36,1); }
+.fl-shell.pop { animation: pop .45s cubic-bezier(.22,1,.36,1) both; }
+.fl-shell.out { opacity: 0; }
+@keyframes pop { from { opacity: 0; transform: translateY(-8px) scale(.9); } to { opacity: 1; transform: none; } }
+.fl-shell::before, .fl-shell::after { content: ""; position: absolute; inset: 0; background-size: 100% 100%; transition: opacity .52s cubic-bezier(.22,1,.36,1); pointer-events: none; }
+.fl-shell::before { background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 150 36' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%' width='100%' fill='url(%23grad)' opacity='0.30000001192092896'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(9.8774 -1.6367e-8 7.8769e-9 3.8507 75 18)'><stop stop-color='rgba(255,255,255,0.41)' offset='0'/><stop stop-color='rgba(255,255,255,1)' offset='1'/></radialGradient></defs></svg>"); }
+.fl-shell::after { opacity: 0; background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 230 138' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%' width='100%' fill='url(%23grad)' opacity='1'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(1.0359e-12 13.458 -25.402 -2.8508e-14 115 21.202)'><stop stop-color='rgba(255,255,255,0.9)' offset='0'/><stop stop-color='rgba(255,255,255,0.5)' offset='1'/></radialGradient></defs></svg>"); }
+.fl-shell.is-card::before { opacity: 0; }
+.fl-shell.is-card::after { opacity: 1; }
+.fl-c { position: relative; z-index: 1; transition: opacity .3s cubic-bezier(.22,1,.36,1), transform .52s cubic-bezier(.22,1,.36,1); }
+.fl-c.abs { position: absolute; top: 0; left: 50%; width: max-content; transform: translateX(-50%); transform-origin: 50% 0; }
+.fl-c.leaving { opacity: 0; transform: translateX(-50%) scale(.94); transition-duration: .18s, .3s; }
+.fl-c.entering { opacity: 0; transform: translateX(-50%) translateY(-4px) scale(.97); }
+.fl-c.entering.go-in { opacity: 1; transform: translateX(-50%); transition-delay: .1s, 0s; }
+.fl-pill { padding: 8px 12px; color: #fff; font-weight: 500; font-size: 14px; line-height: 1.3; white-space: nowrap; }
+.fl-card { padding: 8px 12px; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.fl-card .tag { display: flex; align-items: center; gap: 4px; padding: 2px 6px 2px 8px; }
+.fl-card .tag img { width: 5px; height: 5px; }
+.fl-card .tag span { width: 52px; font-weight: 500; font-size: 13px; line-height: 1.3; color: #2571ff; text-align: center; }
+.fl-card .body { display: flex; flex-direction: column; gap: 10px; align-items: center; width: 100%; }
+.fl-card .txt { display: flex; flex-direction: column; gap: 2px; align-items: center; line-height: 1.3; text-align: center; white-space: nowrap; }
+.fl-card .h { font-weight: 600; font-size: 14px; color: #121212; }
+.fl-card .s { font-weight: 500; font-size: 13px; color: #8b95a1; }
+.fl-card .go { height: 40px; padding: 0 64px; border-radius: 14px; background: #5892ff; color: #fff; font-weight: 600; font-size: 14px; line-height: 24px; white-space: nowrap; display: flex; align-items: center; }
+.fl-mini { height: 34px; padding: 0 7px 0 11px; display: flex; align-items: center; gap: 20px; color: #fff; white-space: nowrap; }
+.fl-mini .left { display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 1.3; white-space: nowrap; }
+.fl-mini .live { display: flex; align-items: center; gap: 2px; }
+.fl-mini .live img { width: 5px; height: 5px; }
+.fl-mini .live span { width: 52px; font-weight: 600; text-align: center; }
+.fl-mini .when { font-weight: 400; }
+.fl-mini .chip { display: flex; align-items: center; padding: 4px 2px 4px 8px; border-radius: 20px; background: #fff; color: #2571ff; font-weight: 600; font-size: 12px; line-height: 1.3; white-space: nowrap; }
+.fl-mini .chip img { width: 16px; height: 16px; transform: scaleX(-1); }
+
+/* ---------- control panel ---------- */
+.panel { width: 300px; max-width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 22px; }
+.panel h1 { margin: 0; font-size: 19px; line-height: 1.35; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+.panel .sub { margin: 4px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+.sec { display: flex; flex-direction: column; gap: 10px; }
+.sec-h { font-size: 12px; font-weight: 600; letter-spacing: .06em; color: var(--muted); }
+.clock { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.clock .big { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.clock .state { font-size: 12.5px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 4px 8px; border-radius: 6px; white-space: nowrap; }
+.chips { display: grid; gap: 6px; }
+.chips.c2 { grid-template-columns: repeat(2, 1fr); }
+.chips.c3 { grid-template-columns: repeat(3, 1fr); }
+.chips button { padding: 10px 6px; }
+.chips button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chips button, .seg button, .row-btns button { background: var(--chip); border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px; font-size: 13px; font-weight: 600; color: var(--ink); }
+.chips button:hover, .seg button:hover, .row-btns button:hover, .jump button:hover { border-color: var(--accent); }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.jump { display: flex; flex-direction: column; gap: 4px; }
+.jump .grp-label { font-size: 12px; color: var(--muted); margin: 6px 0 2px; }
+.jump button { text-align: left; display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; border: 1px solid transparent; font-size: 13.5px; line-height: 1.4; color: var(--ink); }
+.jump button i { font-style: normal; flex: none; width: 22px; height: 22px; border-radius: 6px; background: var(--chip); color: var(--muted); display: grid; place-items: center; font-size: 11.5px; font-weight: 700; }
+.jump button[aria-current="true"] { background: var(--accent-soft); }
+.jump button[aria-current="true"] i { background: var(--accent); color: #fff; }
+.row-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tips { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+@media (max-width: 760px) {
+  body { padding-block: 16px; }
+  .layout { gap: 20px; }
+  .panel { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .screen, .kb, .fl-shell, .fl-c, .btn { transition: none !important; animation: none !important; }
+}
+</style>
+
+</head>
+<body>
+<div class="layout">
+  <div class="holder" id="holder">
+    <div class="device" id="device">
+      <div class="screen-wrap" id="phone">
+        <div class="island"></div>
+
+        <!-- 초대장 -->
+        <section class="screen" id="invite" data-pos="center" aria-label="초대장">
+          <div class="statusbar"><span class="time">9:41</span><img src="assets/levels-black.svg" alt=""></div>
+          <div class="inv-body">
+            <div class="inv-title">김이라님의<br><span>초대장</span>이 도착했어요!</div>
+            <div class="inv-card">
+              <div class="inv-sec">
+                <h2>파티 초대장</h2>
+                <img class="inv-line" src="assets/line1.svg" alt="">
+                <div class="inv-rows">
+                  <div class="inv-row"><b>김이라</b><span>를 위해</span></div>
+                  <div class="inv-row"><b>2026 11월 26일</b><span>에</span></div>
+                  <div class="inv-row"><b>오후 4:00</b><span>부터 <strong>10분</strong> 동안</span></div>
+                  <div class="inv-row"><span>온라인 생일 파티가 열려요</span></div>
+                </div>
+              </div>
+              <div class="inv-sec2">
+                <img class="inv-line thick" src="assets/line2.svg" alt="">
+                <div class="inv-pre only-pre">
+                  <div class="l1">파티 시작까지 <strong id="invMin">18분</strong></div>
+                  <div class="l2">파티는 시작 5분 전부터 입장 가능해요</div>
+                </div>
+                <div class="inv-entry only-entry">
+                  <div class="badge"><img src="assets/dot-invite.svg" alt=""><span>입장 가능</span></div>
+                  <div class="t">
+                    <div class="t1">지금 파티에 입장할 수 있어요</div>
+                    <div class="t2" id="invLeft">파티 시작까지 <span>3분 07초</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="inv-action">
+            <div class="grp only-pre">
+              <button class="btn btn-blue" data-go="paper">롤링페이퍼 미리 남기기</button>
+              <div class="cap">메시지를 남긴 뒤에도 파티에 참여할 수 있어요.</div>
+            </div>
+            <div class="grp only-entry">
+              <button class="btn btn-blue" id="enterParty">파티 입장하기</button>
+              <button class="btn btn-text" data-go="paper">롤링페이퍼 먼저 남기기</button>
+            </div>
+            <div class="home"></div>
+          </div>
+        </section>
+
+        <!-- 롤링페이퍼 -->
+        <section class="screen" id="paper" data-pos="right" aria-label="롤링페이퍼 작성">
+          <div class="statusbar"><span class="time">9:41</span><img src="assets/levels-white.svg" alt=""></div>
+          <img class="cake" src="assets/cake.svg" alt="">
+          <div class="msg">
+            <textarea id="msg" rows="1" spellcheck="false" autocomplete="off" aria-label="롤링페이퍼 메시지"></textarea>
+            <div class="sign">- 유나 -</div>
+          </div>
+          <div class="paper-action">
+            <div class="grp">
+              <div class="deadline">작성 가능한 시간 <span id="deadline">3일 23시간 25분 04초</span></div>
+              <button class="btn btn-white" id="submit">작성 완료</button>
+            </div>
+            <div class="home"></div>
+          </div>
+          <div class="kb" id="kb" aria-hidden="true">
+            <div class="kb-suggest"><div>“The”</div><div>the</div><div>to</div></div>
+            <div class="kb-keys">
+              <div class="kb-row r1"></div>
+              <div class="kb-row r2"></div>
+              <div class="kb-row r3"></div>
+              <div class="kb-row r4">
+                <button class="key abc" data-k="abc" tabindex="-1">ABC</button>
+                <button class="key space" data-k=" " tabindex="-1" aria-label="스페이스"></button>
+                <button class="key ret" data-k="ret" tabindex="-1" aria-label="리턴">
+                  <svg width="24" height="18" viewBox="0 0 24 18" fill="none"><path d="M20.5 2v6.5a2.5 2.5 0 0 1-2.5 2.5H4.5M4.5 11l4.2-4.2M4.5 11l4.2 4.2" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="kb-bottom"><img class="emoji" src="assets/emoji.svg" alt=""><img class="mic" src="assets/mic.svg" alt=""></div>
+          </div>
+          <div class="float-slot" id="floatSlot"></div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <aside class="panel" aria-label="남은 시간">
+    <div class="sec">
+      <div class="sec-h">초대장</div>
+      <div class="chips c2">
+        <button data-p="inv-pre" aria-pressed="true">파티 시작 전</button>
+        <button data-p="inv-5" aria-pressed="false">파티 시작 5분 전</button>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sec-h">롤링페이퍼</div>
+      <div class="chips c3">
+        <button data-p="p-15" aria-pressed="false">15분 전</button>
+        <button data-p="p-5" aria-pressed="false">5분 전</button>
+        <button data-p="p-start" aria-pressed="false">파티 시작</button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const SCRIPT = "이라야 \n생일축하해!!\n오늘 직접 선물은 못챙겨줘서\n아쉽지만 이렇게라도 모여서 \n파티해서 다행이야ㅎㅎㅎ\n맛있는 거 많이 먹고 \n행복한 생일 보내길 바랄게!";
+  const PARTIAL = "이라야 \n생일축하해!!\n오늘 직접 선물은 ";
+
+  const invite = $("#invite"), paper = $("#paper"), msg = $("#msg"), slot = $("#floatSlot");
+  const coarse = window.matchMedia("(pointer: coarse)").matches;
+  if (coarse) msg.setAttribute("inputmode", "none");
+
+  // ---------- state ----------
+  let screen = "invite";           // invite | paper
+  let mode = "typing";             // typing | idle | done  (paper only)
+  let partyAt = Date.now() + 1080 * 1000;
+  let writeEnd = Date.now() + ((3 * 24 + 23) * 3600 + 25 * 60 + 4) * 1000;
+  let collapsed = false;
+  let lastBand = null;
+  let floatKey = "";
+  let autoTimer = null;
+
+  const remaining = () => Math.round((partyAt - Date.now()) / 1000);
+  const band = (r) => (r <= 0 ? "started" : r <= 300 ? "entry" : "pre");
+
+  // ---------- keyboard ----------
+  const rows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+  const keyBtn = (ch) => `<button class="key" data-k="${ch}" tabindex="-1">${ch}</button>`;
+  $(".r1").innerHTML = [...rows[0]].map(keyBtn).join("");
+  $(".r2").innerHTML = [...rows[1]].map(keyBtn).join("");
+  $(".r3").innerHTML =
+    `<button class="key wide" data-k="shift" tabindex="-1" aria-label="시프트"><svg width="22" height="20" viewBox="0 0 22 20" fill="none"><path d="M11 2 2.5 10.5H7v7h8v-7h4.5L11 2Z" stroke="#2b2d33" stroke-width="1.7" stroke-linejoin="round"/></svg></button><span class="sp"></span>` +
+    [...rows[2]].map(keyBtn).join("") +
+    `<span class="sp"></span><button class="key wide" data-k="del" tabindex="-1" aria-label="지우기"><svg width="26" height="19" viewBox="0 0 26 19" fill="none"><path d="M8.2 1.5h14.3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H8.2a2 2 0 0 1-1.5-.7L1.5 9.5l5.2-7.3a2 2 0 0 1 1.5-.7Z" stroke="#2b2d33" stroke-width="1.6" stroke-linejoin="round"/><path d="m12 6 7 7m0-7-7 7" stroke="#2b2d33" stroke-width="1.6" stroke-linecap="round"/></svg></button>`;
+
+  let shift = false;
+  const kb = $("#kb");
+  kb.addEventListener("pointerdown", (e) => {
+    e.preventDefault();            // keep focus in textarea
+    const key = e.target.closest(".key");
+    if (!key) return;
+    key.classList.add("on");
+    setTimeout(() => key.classList.remove("on"), 110);
+    handleKey(key.dataset.k);
+  });
+
+  function handleKey(k) {
+    stopAuto();
+    if (mode !== "typing") setMode("typing");
+    let v = msg.value;
+    if (k === "del") { v = [...v].slice(0, -1).join(""); }
+    else if (k === "shift") { shift = !shift; $(".r3 .key").style.background = shift ? "#fff" : ""; return; }
+    else if (k === "abc") { return; }
+    else if (SCRIPT.startsWith(v) && v.length < SCRIPT.length) {
+      // any key types the next character of the sample message
+      v = SCRIPT.slice(0, v.length + 1);
+      while (SCRIPT[v.length] === "\n") v = SCRIPT.slice(0, v.length + 1);
+    } else if (k === "ret") { v += "\n"; }
+    else { v += shift ? k.toUpperCase() : k; shift = false; }
+    setMsg(v);
+    onTyped();
+  }
+
+  // ---------- message ----------
+  function fit() { msg.style.height = "20px"; msg.style.height = Math.min(msg.scrollHeight, 180) + "px"; }
+  function setMsg(v) { msg.value = v; fit(); msg.setSelectionRange(v.length, v.length); updateSubmit(); }
+  function updateSubmit() { $("#submit").disabled = msg.value.trim() === ""; }
+  msg.addEventListener("input", () => { fit(); updateSubmit(); onTyped(); });
+  msg.addEventListener("focus", () => { if (mode !== "typing") setMode("typing"); });
+
+  function onTyped() {
+    if (mode === "typing" && band(remaining()) !== "pre" && !collapsed) { collapsed = true; renderFloat(); }
+  }
+
+  function setMode(m) {
+    mode = m;
+    paper.classList.toggle("typing", m === "typing");
+    paper.classList.toggle("done", m === "done");
+    msg.readOnly = m === "done" ? false : false;
+    if (m === "typing") { if (document.activeElement !== msg) msg.focus({ preventScroll: true }); }
+    else msg.blur();
+    renderFloat();
+  }
+
+  paper.addEventListener("pointerdown", (e) => {
+    if (mode !== "typing") return;
+    if (e.target.closest("#msg, .kb, .float-slot")) return;
+    setMode("idle");
+  });
+  $("#submit").addEventListener("click", () => { if (msg.value.trim()) { stopAuto(); setMode("done"); } });
+
+  // ---------- floating notification ----------
+  // returns [key, contentClass, innerHTML, isCard]
+  function floatContent(b, r) {
+    const min = Math.max(1, Math.ceil(r / 60));
+    if (b === "pre") {
+      if (mode === "done") return ["", "", "", false];
+      return ["pre:" + min, "fl-pill", `🎉 파티 시작까지 ${min}분`, false];
+    }
+    if (collapsed) {
+      const when = b === "started" ? "진행 중" : `${min}분 후 시작`;
+      return ["mini:" + when, "fl-mini", `<button class="left" data-act="expand" aria-label="알림 펼치기"><span class="live"><img src="assets/dot-pill.svg" alt=""><span>입장 가능</span></span><span class="when">${when}</span></button><button class="chip btn" data-act="enter">입장하기<img src="assets/chevron.svg" alt=""></button>`, false];
+    }
+    const [h, s, go] = b === "started"
+      ? ["🎉 파티가 시작됐어요!", "친구들이 기다리고 있어요", "지금 입장하기"]
+      : ["이제 파티에 입장할 수 있어요!", `파티 시작까지 ${min}분`, "파티 입장하기"];
+    return [b + "-card:" + s, "fl-card", `<div class="tag"><img src="assets/dot-card.svg" alt=""><span>입장 가능</span></div><div class="body"><div class="txt"><div class="h">${h}</div><div class="s">${s}</div></div><button class="go btn" data-act="enter">${go}</button></div>`, true];
+  }
+
+  let shell = null, morphTimer = null;
+  const kindOf = (k) => k.split(":")[0];
+  function makeContent(cls, html) {
+    const c = document.createElement("div");
+    c.className = "fl-c " + cls;
+    c.innerHTML = html;
+    return c;
+  }
+  function settle() {
+    clearTimeout(morphTimer);
+    if (!shell) return;
+    shell.querySelectorAll(".fl-c.leaving").forEach((n) => n.remove());
+    // switch content back to normal flow without animating the transform
+    // (otherwise translateX(-50%) -> none plays as a sideways jump)
+    const items = shell.querySelectorAll(".fl-c");
+    items.forEach((n) => { n.style.transition = "none"; n.classList.remove("abs", "entering", "go-in"); });
+    shell.classList.remove("morphing");
+    shell.style.width = shell.style.height = "";
+    shell.offsetWidth;
+    items.forEach((n) => { n.style.transition = ""; });
+  }
+  function renderFloat() {
+    const r = remaining(), b = band(r);
+    const [key, cls, html, isCard] = floatContent(b, r);
+    if (key === floatKey) return;
+    const prevKey = floatKey;
+    floatKey = key;
+
+    // hide
+    if (!key) {
+      if (shell) { const s = shell; shell = null; s.classList.add("out"); setTimeout(() => s.remove(), 260); }
+      return;
+    }
+    // first appearance
+    if (!shell) {
+      slot.innerHTML = "";
+      shell = document.createElement("div");
+      shell.className = "fl-shell pop" + (isCard ? " is-card" : "");
+      shell.setAttribute("role", "status");
+      shell.appendChild(makeContent(cls, html));
+      slot.appendChild(shell);
+      return;
+    }
+    // same kind of alert, only the text changed: swap in place
+    if (kindOf(prevKey) === kindOf(key)) {
+      settle();
+      shell.querySelector(".fl-c").replaceWith(makeContent(cls, html));
+      return;
+    }
+    // morph between alert kinds (expand / collapse) with ease-out
+    settle();
+    shell.classList.remove("pop");
+    const old = shell.querySelector(".fl-c");
+    const fromW = shell.offsetWidth, fromH = shell.offsetHeight;
+    const next = makeContent(cls, html);
+    next.classList.add("abs", "entering");
+    shell.appendChild(next);
+    const toW = next.offsetWidth + 2, toH = next.offsetHeight + 2;   // + 1px border each side
+    shell.style.width = fromW + "px";
+    shell.style.height = fromH + "px";
+    old.classList.add("abs", "leaving");
+    shell.offsetWidth;                                               // commit start size
+    shell.classList.add("morphing");
+    shell.classList.toggle("is-card", isCard);
+    shell.style.width = toW + "px";
+    shell.style.height = toH + "px";
+    requestAnimationFrame(() => next.classList.add("go-in"));
+    morphTimer = setTimeout(settle, 560);
+  }
+  slot.addEventListener("pointerdown", (e) => e.stopPropagation());
+  slot.addEventListener("click", (e) => {
+    const a = e.target.closest("[data-act]");
+    if (!a) return;
+    if (a.dataset.act === "expand") { collapsed = false; renderFloat(); }
+    // "enter" buttons are active but lead nowhere in this prototype
+  });
+
+  // ---------- screens ----------
+  function go(to) {
+    screen = to;
+    invite.dataset.pos = to === "invite" ? "center" : "left";
+    paper.dataset.pos = to === "paper" ? "center" : "right";
+    if (to === "paper") setMode(mode);
+    else { stopAuto(); msg.blur(); }
+  }
+  document.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => { mode = "typing"; go(b.dataset.go); markPreset(null); }));
+
+  // ---------- clock ----------
+  const pad = (n) => String(n).padStart(2, "0");
+  function tick() {
+    const r = remaining(), b = band(r);
+    if (b !== lastBand) { collapsed = false; lastBand = b; }
+    invite.classList.toggle("entry", b !== "pre");
+    $("#invMin").textContent = Math.max(1, Math.ceil(r / 60)) + "분";
+    // after the party starts, only "지금 파티에 입장할 수 있어요" stays (no countdown line)
+    $("#invLeft").hidden = b === "started";
+    if (b !== "started") $("#invLeft").innerHTML = `파티 시작까지 <span>${Math.floor(r / 60)}분 ${pad(r % 60)}초</span>`;
+    const w = Math.max(0, Math.round((writeEnd - Date.now()) / 1000));
+    $("#deadline").textContent = `${Math.floor(w / 86400)}일 ${Math.floor(w % 86400 / 3600)}시간 ${pad(Math.floor(w % 3600 / 60))}분 ${pad(w % 60)}초`;
+    renderFloat();
+  }
+  function setRemaining(sec) { partyAt = Date.now() + sec * 1000; lastBand = null; tick(); }
+  setInterval(tick, 1000);
+
+  function stopAuto() { clearInterval(autoTimer); autoTimer = null; }
+
+  // ---------- time presets ----------
+  function markPreset(id) { document.querySelectorAll("[data-p]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.p === id)); }
+  const keepOr = (fallback) => { if (!msg.value.trim()) setMsg(fallback); };
+  const presets = {
+    "inv-pre": () => { setRemaining(1080); go("invite"); },
+    "inv-5":   () => { setRemaining(300); go("invite"); },
+    "p-15":    () => { setRemaining(900); keepOr(PARTIAL); mode = "typing"; go("paper"); },
+    "p-5":     () => { setRemaining(300); keepOr(PARTIAL); mode = "typing"; go("paper"); collapsed = false; renderFloat(); },
+    "p-start": () => { setRemaining(0); keepOr(SCRIPT); mode = "idle"; go("paper"); collapsed = false; renderFloat(); },
+  };
+  document.querySelectorAll("[data-p]").forEach((b) => b.addEventListener("click", () => { stopAuto(); presets[b.dataset.p](); markPreset(b.dataset.p); }));
+
+  // press feedback for buttons that lead nowhere
+  $("#enterParty").addEventListener("click", (e) => e.currentTarget.blur());
+
+  // ---------- scale phone to viewport ----------
+  const holder = $("#holder"), device = $("#device");
+  function scale() {
+    const narrow = window.innerWidth < 500;
+    document.body.classList.toggle("bare", narrow);
+    const W = narrow ? 375 : 399, H = narrow ? 812 : 836;
+    const availW = Math.min(window.innerWidth - 32, W);
+    const availH = narrow ? Infinity : Math.max(480, window.innerHeight - 48);
+    const s = Math.min(1, availW / W, availH / H);
+    device.style.transform = `scale(${s})`;
+    holder.style.width = W * s + "px";
+    holder.style.height = H * s + "px";
+  }
+  window.addEventListener("resize", scale);
+  scale();
+
+  setMsg("");
+  tick();
+  markPreset("inv-pre");
+})();
+</script>
+</body>
+</html>
